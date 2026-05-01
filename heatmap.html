@@ -15,12 +15,12 @@
     <div class="heatmap-header">
       <span class="heatmap-title">📊 Portfolio Heatmap</span>
       <div class="legend">
-        <span class="legend-chip green">💚 Very High 4.5+</span>
-        <span class="legend-chip blue">🔵 High 4.0–4.4</span>
-        <span class="legend-chip yellow">🟡 Moderate 3.5–3.9</span>
-        <span class="legend-chip orange">🟠 Selective 3.0–3.4</span>
-        <span class="legend-chip red">🔴 Avoid &lt;3.0</span>
-        <span class="legend-chip gray">⬜ Unscored</span>
+        <span class="legend-chip green"  data-color="green">💚 Very High 4.5+</span>
+        <span class="legend-chip blue"   data-color="blue">🔵 High 4.0–4.4</span>
+        <span class="legend-chip yellow" data-color="yellow">🟡 Moderate 3.5–3.9</span>
+        <span class="legend-chip orange" data-color="orange">🟠 Selective 3.0–3.4</span>
+        <span class="legend-chip red"    data-color="red">🔴 Avoid &lt;3.0</span>
+        <span class="legend-chip gray"   data-color="gray">⬜ Unscored</span>
       </div>
     </div>
 
@@ -135,7 +135,9 @@
           tile.title = card.name;
 
           if (parsed) {
+            var tileColor = EquityUtils.scoreToTrelloColor(parsed.score);
             var colors = EquityUtils.scoreToHeatmapColor(parsed.score);
+            tile.dataset.color = tileColor;
             tile.style.background = colors.bg;
             tile.style.color = colors.fg;
             tile.innerHTML =
@@ -143,6 +145,7 @@
               '<div class="tile-score">' + parsed.score.toFixed(1) + '</div>';
           } else {
             tile.classList.add('tile-unscored');
+            tile.dataset.color = 'gray';
             tile.style.background = '#97a0af';
             tile.style.color = '#fff';
             /* Best-effort display name from the raw card name.
@@ -165,6 +168,26 @@
       /* ── Show the heatmap ────────────────────────────────────────────── */
       document.getElementById('loading').style.display = 'none';
       document.getElementById('heatmap').style.display = 'block';
+
+      /* ── Filter toggles ─────────────────────────────────────────────── */
+      document.querySelectorAll('.legend-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var color = chip.dataset.color;
+          chip.classList.toggle('off');
+          var hidden = chip.classList.contains('off');
+          document.querySelectorAll('.tile[data-color="' + color + '"]').forEach(function (tile) {
+            tile.classList.toggle('filtered-out', hidden);
+          });
+          /* Hide sector headings whose entire grid is now filtered out */
+          document.querySelectorAll('.sector-section').forEach(function (sec) {
+            var tiles = sec.querySelectorAll('.tile');
+            var allHidden = Array.prototype.every.call(tiles, function (t) {
+              return t.classList.contains('filtered-out');
+            });
+            sec.style.display = allHidden ? 'none' : '';
+          });
+        });
+      });
     }
 
     /* HTML-escape helper */

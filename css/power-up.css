@@ -62,6 +62,21 @@ body {
 .legend-chip.red    { background: #eb5a46; }
 .legend-chip.gray   { background: #97a0af; }
 
+.legend-chip {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.legend-chip.off {
+  opacity: 0.35;
+  box-shadow: none;
+}
+
+.tile.filtered-out {
+  display: none;
+}
+
 /* ── Stats row ───────────────────────────────────────────────────────── */
 .stats-bar {
   display: flex;
