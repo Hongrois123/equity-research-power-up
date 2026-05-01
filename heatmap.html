@@ -13,7 +13,13 @@
   <div id="heatmap" class="heatmap-wrapper" style="display:none">
 
     <div class="heatmap-header">
-      <span class="heatmap-title">📊 Portfolio Heatmap</span>
+      <div class="heatmap-header-left">
+        <span class="heatmap-title">📊 Portfolio Heatmap</span>
+        <div class="view-toggle">
+          <button class="view-btn active" id="btn-tiles">&#x1F4CA; Tiles</button>
+          <button class="view-btn" id="btn-list">&#9776; List</button>
+        </div>
+      </div>
       <div class="legend">
         <span class="legend-chip green"  data-color="green">💚 Very High 4.5+</span>
         <span class="legend-chip blue"   data-color="blue">🔵 High 4.0–4.4</span>
@@ -28,6 +34,31 @@
 
     <div id="sectors"></div>
 
+    <div id="listview" style="display:none">
+      <div class="list-status-bar">
+        <span id="list-price-status" class="list-price-status"></span>
+      </div>
+      <table class="list-table" id="list-table">
+        <thead>
+          <tr>
+            <th data-col="ticker">Ticker</th>
+            <th data-col="name">Name</th>
+            <th data-col="score">Score</th>
+            <th data-col="conviction">Conviction</th>
+            <th data-col="price">Price</th>
+            <th data-col="chgPct">Chg%</th>
+            <th data-col="volume">Volume</th>
+            <th data-col="sector">Sector</th>
+            <th data-col="stance">Stance</th>
+            <th data-col="lastReviewed">Last Reviewed</th>
+            <th data-col="earnings">Earnings</th>
+            <th>TR</th>
+          </tr>
+        </thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+
   </div>
 
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
@@ -35,7 +66,11 @@
   <script>
     'use strict';
 
-    var t = TrelloPowerUp.iframe();
+    var t             = TrelloPowerUp.iframe();
+    var parsedRows    = [];
+    var priceCache    = null;   // null = not yet fetched
+    var sortState     = { col: 'score', dir: -1 };
+    var activeFilters = {};
 
     Promise.all([
       t.board('name'),
@@ -49,7 +84,7 @@
     });
 
     function renderHeatmap(board) {
-      /* ── Index cards by list ─────────────────────────────────────────── */
+      /* ── Index open cards by list ────────────────────────────────────── */
       var cardsByList = {};
       board.cards.forEach(function (card) {
         if (card.closed) return;
@@ -58,9 +93,7 @@
         cardsByList[id].push(card);
       });
 
-      // Only show lists that contain at least one scored equity card.
-      // Lists like "Useful", "Technical Analysis", "INCOMING" have no scored
-      // cards and are irrelevant to the portfolio heatmap.
+      /* ── Equity-only lists ───────────────────────────────────────────── */
       var activeLists = (board.lists || []).filter(function (l) {
         if (l.closed || !cardsByList[l.id]) return false;
         return cardsByList[l.id].some(function (c) {
@@ -73,6 +106,307 @@
           return EquityUtils.parseTitle(c.name) !== null;
         });
       }).length;
+
+      /* ── Portfolio stats ─────────────────────────────────────────────── */
+      var allCards = board.cards.filter(function (c) { return !c.closed; });
+      var scored = allCards.map(function (c) {
+        return EquityUtils.parseTitle(c.name);
+      }).filter(Boolean);
+
+      var avgScore = scored.length
+        ? (scored.reduce(function (s, p) { return s + p.score; }, 0) / scored.length)
+        : null;
+
+      var buckets = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0 };
+      scored.forEach(function (p) {
+        buckets[EquityUtils.scoreToTrelloColor(p.score)]++;
+      });
+
+      /* ── Stats bar ───────────────────────────────────────────────────── */
+      var statsEl = document.getElementById('stats');
+      statsEl.innerHTML =
+        chip('Total positions', allCards.length) +
+        (avgScore !== null ? chip('Avg score', avgScore.toFixed(2) + ' / 5.0') : '') +
+        chip('💚 Very High', buckets.green) +
+        chip('🔵 High', buckets.blue) +
+        chip('🟡 Moderate', buckets.yellow) +
+        chip('🟠 Selective', buckets.orange) +
+        chip('🔴 Avoid', buckets.red);
+
+      function chip(label, value) {
+        return '<div class="stat-chip"><strong>' + value + '</strong>\u2002' + label + '</div>';
+      }
+
+      /* ── Tile view ───────────────────────────────────────────────────── */
+      var sectorsEl = document.getElementById('sectors');
+      sectorsEl.innerHTML = '';
+
+      activeLists.forEach(function (list) {
+        var decorated = cardsByList[list.id].map(function (card) {
+          return { card: card, parsed: EquityUtils.parseTitle(card.name) };
+        });
+        decorated.sort(function (a, b) {
+          var sa = a.parsed ? a.parsed.score : -1;
+          var sb = b.parsed ? b.parsed.score : -1;
+          return sb - sa;
+        });
+
+        var section = document.createElement('div');
+        section.className = 'sector-section';
+
+        var heading = document.createElement('div');
+        heading.className = 'sector-heading';
+        heading.textContent = list.name + '\u2002(' + decorated.length + ')';
+        section.appendChild(heading);
+
+        var grid = document.createElement('div');
+        grid.className = 'sector-grid';
+
+        decorated.forEach(function (item) {
+          var card   = item.card;
+          var parsed = item.parsed;
+          var tile   = document.createElement('a');
+          tile.className = 'tile';
+          tile.href   = 'https://trello.com/c/' + (card.shortLink || card.id);
+          tile.target = '_blank';
+          tile.rel    = 'noopener noreferrer';
+          tile.title  = card.name;
+
+          if (parsed) {
+            var tileColor = EquityUtils.scoreToTrelloColor(parsed.score);
+            var colors    = EquityUtils.scoreToHeatmapColor(parsed.score);
+            tile.dataset.color    = tileColor;
+            tile.style.background = colors.bg;
+            tile.style.color      = colors.fg;
+            tile.innerHTML =
+              '<div class="tile-ticker">' + esc(parsed.ticker) + '</div>' +
+              '<div class="tile-score">'  + parsed.score.toFixed(1) + '</div>';
+          } else {
+            tile.classList.add('tile-unscored');
+            tile.dataset.color    = 'gray';
+            tile.style.background = '#97a0af';
+            tile.style.color      = '#fff';
+            var raw         = card.name.replace(/[\x00-\x1F\x7F]/g, ' ').trim();
+            var tickerMatch = raw.match(/[A-Z][A-Z0-9.]{1,7}/);
+            var display     = tickerMatch ? tickerMatch[0] : raw.slice(0, 10);
+            tile.innerHTML  = '<div class="tile-ticker">' + esc(display) + '</div>';
+          }
+
+          grid.appendChild(tile);
+        });
+
+        section.appendChild(grid);
+        sectorsEl.appendChild(section);
+      });
+
+      /* ── Build rows for list view ────────────────────────────────────── */
+      parsedRows = [];
+      activeLists.forEach(function (list) {
+        (cardsByList[list.id] || []).forEach(function (card) {
+          var parsed = EquityUtils.parseTitle(card.name);
+          if (!parsed) return;
+          var meta = EquityUtils.parseDescription(card.desc || '');
+          parsedRows.push({
+            ticker:       parsed.ticker,
+            name:         extractCompanyName(card.name),
+            score:        parsed.score,
+            conviction:   parsed.conviction,
+            color:        EquityUtils.scoreToTrelloColor(parsed.score),
+            sector:       meta.sector || '',
+            stance:       meta.stance || '',
+            lastReviewed: meta.date   || '',
+            earnings:     card.due ? card.due.slice(0, 10) : '',
+            shortLink:    card.shortLink || card.id,
+            price: null, chgPct: null, volume: null
+          });
+        });
+      });
+      parsedRows.sort(function (a, b) { return b.score - a.score; });
+      renderListTable();
+
+      /* ── Show heatmap ────────────────────────────────────────────────── */
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('heatmap').style.display = 'block';
+
+      if (hiddenListCount > 0) {
+        var footer = document.createElement('div');
+        footer.className = 'hidden-lists-note';
+        footer.textContent = hiddenListCount + ' non-equity list' +
+          (hiddenListCount > 1 ? 's' : '') + ' hidden (no scored cards)';
+        sectorsEl.appendChild(footer);
+      }
+
+      /* ── View toggle ─────────────────────────────────────────────────── */
+      document.getElementById('btn-tiles').addEventListener('click', function () { setView('tiles'); });
+      document.getElementById('btn-list').addEventListener('click',  function () { setView('list');  });
+
+      /* ── Shared filter toggles ───────────────────────────────────────── */
+      document.querySelectorAll('.legend-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var color  = chip.dataset.color;
+          chip.classList.toggle('off');
+          var hidden = chip.classList.contains('off');
+          activeFilters[color] = hidden;
+
+          document.querySelectorAll('.tile[data-color="' + color + '"]').forEach(function (tile) {
+            tile.classList.toggle('filtered-out', hidden);
+          });
+          document.querySelectorAll('.sector-section').forEach(function (sec) {
+            var tiles     = sec.querySelectorAll('.tile');
+            var allHidden = Array.prototype.every.call(tiles, function (tt) {
+              return tt.classList.contains('filtered-out');
+            });
+            sec.style.display = allHidden ? 'none' : '';
+          });
+          document.querySelectorAll('#list-body tr[data-color="' + color + '"]').forEach(function (row) {
+            row.classList.toggle('filtered-out', hidden);
+          });
+        });
+      });
+    }
+
+    /* ── View switching ──────────────────────────────────────────────────── */
+    function setView(view) {
+      var isList = view === 'list';
+      document.getElementById('sectors').style.display  = isList ? 'none' : '';
+      document.getElementById('listview').style.display = isList ? ''     : 'none';
+      document.getElementById('btn-tiles').classList.toggle('active', !isList);
+      document.getElementById('btn-list').classList.toggle('active',   isList);
+      if (isList && priceCache === null) fetchPrices();
+    }
+
+    /* ── Price fetch (Yahoo Finance, degrades gracefully) ────────────────── */
+    function fetchPrices() {
+      priceCache = {};
+      var tickers  = parsedRows.map(function (r) { return r.ticker; }).join(',');
+      var statusEl = document.getElementById('list-price-status');
+      statusEl.textContent = 'Loading live prices\u2026';
+
+      var url = 'https://query2.finance.yahoo.com/v7/finance/quote' +
+        '?symbols=' + encodeURIComponent(tickers) +
+        '&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume' +
+        '&formatted=false&lang=en-US&region=US';
+
+      fetch(url, { credentials: 'omit', mode: 'cors' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var quotes = (data.quoteResponse && data.quoteResponse.result) || [];
+          quotes.forEach(function (q) {
+            priceCache[q.symbol] = {
+              price:  q.regularMarketPrice,
+              chgPct: q.regularMarketChangePercent,
+              volume: q.regularMarketVolume
+            };
+          });
+          parsedRows.forEach(function (r) {
+            var p = priceCache[r.ticker];
+            if (p) { r.price = p.price; r.chgPct = p.chgPct; r.volume = p.volume; }
+          });
+          statusEl.textContent = '';
+          renderListTable();
+        })
+        .catch(function () {
+          statusEl.textContent = 'Live prices unavailable';
+        });
+    }
+
+    /* ── List table ──────────────────────────────────────────────────────── */
+    var CONV_COLORS = {
+      green: '#61bd4f', blue: '#0079bf', yellow: '#d9b51c',
+      orange: '#e6a118', red: '#eb5a46', gray: '#97a0af'
+    };
+
+    function renderListTable() {
+      var sorted = parsedRows.slice().sort(function (a, b) {
+        var va = a[sortState.col], vb = b[sortState.col];
+        var nullVal = sortState.dir === 1 ? '\uFFFF' : '';
+        if (va == null || va === '') va = nullVal;
+        if (vb == null || vb === '') vb = nullVal;
+        if (va < vb) return  sortState.dir;
+        if (va > vb) return -sortState.dir;
+        return 0;
+      });
+
+      var tbody = document.getElementById('list-body');
+      tbody.innerHTML = '';
+
+      sorted.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.dataset.color = r.color;
+        if (activeFilters[r.color]) tr.classList.add('filtered-out');
+
+        var chgClass = r.chgPct != null ? (r.chgPct >= 0 ? 'positive' : 'negative') : '';
+        var chgStr   = r.chgPct != null
+          ? (r.chgPct >= 0 ? '+' : '') + r.chgPct.toFixed(2) + '%'
+          : '\u2014';
+
+        tr.innerHTML =
+          '<td class="td-ticker">' + esc(r.ticker) + '</td>' +
+          '<td class="td-name">'   + esc(r.name)   + '</td>' +
+          '<td class="td-score">'  + r.score.toFixed(1) + '</td>' +
+          '<td><span class="td-conv" style="background:' + CONV_COLORS[r.color] + '">' +
+            esc(r.conviction) + '</span></td>' +
+          '<td>' + (r.price  != null ? '$' + r.price.toFixed(2) : '\u2014') + '</td>' +
+          '<td class="td-chg ' + chgClass + '">' + chgStr + '</td>' +
+          '<td>' + (r.volume != null ? fmtVol(r.volume) : '\u2014') + '</td>' +
+          '<td>' + esc(r.sector)       + '</td>' +
+          '<td>' + esc(r.stance)       + '</td>' +
+          '<td>' + esc(r.lastReviewed) + '</td>' +
+          '<td>' + esc(r.earnings)     + '</td>' +
+          '<td><a class="td-link" href="https://trello.com/c/' + esc(r.shortLink) +
+            '" target="_blank" rel="noopener noreferrer">TR</a></td>';
+
+        tbody.appendChild(tr);
+      });
+
+      document.querySelectorAll('#list-table th[data-col]').forEach(function (th) {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.col === sortState.col) {
+          th.classList.add(sortState.dir === -1 ? 'sort-desc' : 'sort-asc');
+        }
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      var th = e.target.closest && e.target.closest('#list-table th[data-col]');
+      if (!th) return;
+      var col = th.dataset.col;
+      if (sortState.col === col) {
+        sortState.dir = -sortState.dir;
+      } else {
+        sortState.col = col;
+        sortState.dir = (col === 'score' || col === 'price' || col === 'chgPct' || col === 'volume') ? -1 : 1;
+      }
+      renderListTable();
+    });
+
+    /* ── Helpers ─────────────────────────────────────────────────────────── */
+    function extractCompanyName(name) {
+      var m2 = name.match(/^([\s\S]+?)\s*\([A-Z]+:[A-Z]/);
+      if (m2) return m2[1].replace(/^[^\w\u00C0-\u024F]+/, '').trim();
+      var m1 = name.match(/[A-Z][A-Z0-9.]{0,8}\s+[\u2014\u2013\-]+\s+([^|]+)\|/);
+      if (m1) return m1[1].trim();
+      return '';
+    }
+
+    function fmtVol(v) {
+      if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+      if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+      if (v >= 1e3) return Math.round(v / 1e3)   + 'K';
+      return String(v);
+    }
+
+    function esc(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
 
       /* ── Compute portfolio stats ─────────────────────────────────────── */
       var allCards = board.cards.filter(function (c) { return !c.closed; });

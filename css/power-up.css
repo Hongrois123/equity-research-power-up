@@ -244,3 +244,128 @@ body {
   padding: 1px 4px;
   font-size: 11px;
 }
+
+/* ── Heatmap header left group ───────────────────────────────────────── */
+.heatmap-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── View toggle ─────────────────────────────────────────────────────── */
+.view-toggle {
+  display: flex;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff;
+  color: #5e6c84;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.view-btn + .view-btn {
+  border-left: 1px solid #dfe1e6;
+}
+
+.view-btn.active {
+  background: #0079bf;
+  color: #fff;
+}
+
+.view-btn:not(.active):hover {
+  background: #f4f5f7;
+}
+
+/* ── List view ───────────────────────────────────────────────────────── */
+#listview {
+  padding-bottom: 32px;
+}
+
+.list-status-bar {
+  min-height: 22px;
+  margin-bottom: 8px;
+}
+
+.list-price-status {
+  font-size: 12px;
+  color: #5e6c84;
+  font-style: italic;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.list-table th {
+  position: sticky;
+  top: 0;
+  background: #f4f5f7;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5e6c84;
+  border-bottom: 2px solid #dfe1e6;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.list-table th:hover { color: #172b4d; }
+.list-table th.sort-asc::after  { content: ' \2191'; }
+.list-table th.sort-desc::after { content: ' \2193'; }
+.list-table th:last-child { cursor: default; }
+
+.list-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0f1f3;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.list-table tr:hover td { background: #f8f9fa; }
+.list-table tr.filtered-out { display: none; }
+
+.td-ticker { font-weight: 800; font-size: 13px; }
+.td-name   { color: #5e6c84; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.td-score  { font-weight: 700; }
+
+.td-conv {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.td-chg.positive { color: #61bd4f; font-weight: 600; }
+.td-chg.negative { color: #eb5a46; font-weight: 600; }
+
+.td-link {
+  display: inline-block;
+  padding: 2px 7px;
+  background: #f0f1f3;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #172b4d;
+}
+
+.td-link:hover { background: #dfe1e6; }
