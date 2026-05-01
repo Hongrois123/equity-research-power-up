@@ -58,9 +58,21 @@
         cardsByList[id].push(card);
       });
 
+      // Only show lists that contain at least one scored equity card.
+      // Lists like "Useful", "Technical Analysis", "INCOMING" have no scored
+      // cards and are irrelevant to the portfolio heatmap.
       var activeLists = (board.lists || []).filter(function (l) {
-        return !l.closed && cardsByList[l.id] && cardsByList[l.id].length > 0;
+        if (l.closed || !cardsByList[l.id]) return false;
+        return cardsByList[l.id].some(function (c) {
+          return EquityUtils.parseTitle(c.name) !== null;
+        });
       });
+      var hiddenListCount = (board.lists || []).filter(function (l) {
+        if (l.closed || !cardsByList[l.id] || cardsByList[l.id].length === 0) return false;
+        return !cardsByList[l.id].some(function (c) {
+          return EquityUtils.parseTitle(c.name) !== null;
+        });
+      }).length;
 
       /* ── Compute portfolio stats ─────────────────────────────────────── */
       var allCards = board.cards.filter(function (c) { return !c.closed; });
@@ -168,6 +180,13 @@
       /* ── Show the heatmap ────────────────────────────────────────────── */
       document.getElementById('loading').style.display = 'none';
       document.getElementById('heatmap').style.display = 'block';
+
+      if (hiddenListCount > 0) {
+        var footer = document.createElement('div');
+        footer.className = 'hidden-lists-note';
+        footer.textContent = hiddenListCount + ' non-equity list' + (hiddenListCount > 1 ? 's' : '') + ' hidden (no scored cards)';
+        document.getElementById('sectors').appendChild(footer);
+      }
 
       /* ── Filter toggles ─────────────────────────────────────────────── */
       document.querySelectorAll('.legend-chip').forEach(function (chip) {

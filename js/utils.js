@@ -19,14 +19,23 @@ var EquityUtils = (function () {
    * @returns {{ ticker: string, score: number, conviction: string } | null}
    */
   function parseTitle(name) {
-    // Accept em-dash (—), en-dash (–), or plain hyphen as the separator.
-    // Use [^|]+ instead of .+? for the company name so pipe characters inside
-    // company names do not cause a premature match failure.
-    var m = name.match(
+    var m;
+
+    // Format 1 (standard): [emojis] TICKER — Company Name | X.X/5.0 | [emoji] Conviction
+    // e.g. "💻 CRM — Salesforce | 3.9/5.0 | 🟡 Moderate Conviction"
+    m = name.match(
       /([A-Z][A-Z0-9.]{0,8})\s+[\u2014\u2013\-]+\s+[^|]+\|\s*(\d+\.?\d*)\/5\.0\s*\|\s*(.+)/
     );
+
+    // Format 2 (exchange-prefixed): Company Name (EXCHANGE:TICKER) — ... | X.X/5.0 | Conviction
+    // e.g. "Walt Disney (NYSE:DIS) — Walt Disney | 3.6/5.0 | Moderate Conviction"
+    if (!m) {
+      m = name.match(
+        /\([A-Z]+:([A-Z][A-Z0-9.]{0,8})\)\s*[\u2014\u2013\-]+\s*[^|]+\|\s*(\d+\.?\d*)\/5\.0\s*\|\s*(.+)/
+      );
+    }
+
     if (!m) return null;
-    // Strip leading non-letter chars (emojis / colour squares) from conviction string.
     var conviction = m[3].trim().replace(/^[^A-Za-z]+/, '').trim();
     return {
       ticker: m[1],

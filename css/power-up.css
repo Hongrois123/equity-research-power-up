@@ -160,6 +160,14 @@ body {
   font-weight: 600;
 }
 
+/* ── Hidden lists note ───────────────────────────────────────────────── */
+.hidden-lists-note {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #97a0af;
+  font-style: italic;
+}
+
 /* ── Loading / error states ──────────────────────────────────────────── */
 .state-message {
   display: flex;
