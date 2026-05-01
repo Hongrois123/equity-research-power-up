@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Re-evaluate</title>
+  <link rel="stylesheet" href="./css/power-up.css" />
+</head>
+<body>
+  <div class="popup-wrapper" id="root">
+    <p class="popup-label" id="heading">Re-evaluate in Copilot Agent</p>
+
+    <div class="command-box">
+      <input id="command-text" class="command-text" type="text" readonly />
+      <button id="copy-btn" class="copy-btn">Copy</button>
+    </div>
+
+    <p class="popup-hint">
+      Open <strong>VS Code → Copilot Chat</strong> in
+      <code>Agent</code> mode, then paste the command above and press&nbsp;Enter.
+      The agent will fetch fresh data and update your Trello card.
+    </p>
+  </div>
+
+  <!-- Trello Power-Up client is loaded so the iframe is fully initialised,
+       even though this popup doesn't need to call any Trello methods. -->
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <script>
+    'use strict';
+
+    /* Read ticker from query string written by connector.js */
+    var params  = new URLSearchParams(window.location.search);
+    var ticker  = params.get('ticker') || '';
+    var command = '/re-evaluate-equity ' + ticker;
+
+    var inputEl  = document.getElementById('command-text');
+    var copyBtn  = document.getElementById('copy-btn');
+    var headingEl = document.getElementById('heading');
+
+    if (ticker) {
+      headingEl.textContent = 'Re-evaluate \u2014 ' + ticker;
+    }
+    inputEl.value = command;
+
+    copyBtn.addEventListener('click', function () {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(command).then(function () {
+          markCopied();
+        }).catch(function () {
+          legacyCopy();
+        });
+      } else {
+        legacyCopy();
+      }
+    });
+
+    function legacyCopy() {
+      inputEl.select();
+      try {
+        document.execCommand('copy');
+        markCopied();
+      } catch (e) { /* silent */ }
+    }
+
+    function markCopied() {
+      copyBtn.textContent = '\u2713 Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(function () {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 2000);
+    }
+
+    /* Select all text when the input is clicked/focused for easy manual copy */
+    inputEl.addEventListener('focus', function () { inputEl.select(); });
+    inputEl.addEventListener('click', function () { inputEl.select(); });
+  </script>
+</body>
+</html>

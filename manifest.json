@@ -1,0 +1,13 @@
+{
+  "name": "Equity Research",
+  "description": "Surfaces conviction scores, investment stances, and a portfolio heatmap for equity research cards managed by the GitHub Copilot Agent workflow.",
+  "author": "Hongrois123",
+  "capabilities": [
+    "card-badges",
+    "card-detail-badges",
+    "card-buttons",
+    "board-buttons"
+  ],
+  "version": "1.0.0",
+  "connectorUrl": "https://hongrois123.github.io/equity-research-power-up/index.html"
+}

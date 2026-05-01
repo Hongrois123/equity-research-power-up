@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Heatmap</title>
+  <link rel="stylesheet" href="./css/power-up.css" />
+</head>
+<body>
+
+  <div id="loading" class="state-message">Loading portfolio data…</div>
+
+  <div id="heatmap" class="heatmap-wrapper" style="display:none">
+
+    <div class="heatmap-header">
+      <span class="heatmap-title">📊 Portfolio Heatmap</span>
+      <div class="legend">
+        <span class="legend-chip green">💚 Very High 4.5+</span>
+        <span class="legend-chip blue">🔵 High 4.0–4.4</span>
+        <span class="legend-chip yellow">🟡 Moderate 3.5–3.9</span>
+        <span class="legend-chip orange">🟠 Selective 3.0–3.4</span>
+        <span class="legend-chip red">🔴 Avoid &lt;3.0</span>
+        <span class="legend-chip gray">⬜ Unscored</span>
+      </div>
+    </div>
+
+    <div id="stats" class="stats-bar"></div>
+
+    <div id="sectors"></div>
+
+  </div>
+
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+  <script src="./js/utils.js"></script>
+  <script>
+    'use strict';
+
+    var t = TrelloPowerUp.iframe();
+
+    t.board('name', 'cards', 'lists').then(function (board) {
+      renderHeatmap(board);
+    }).catch(function (err) {
+      document.getElementById('loading').textContent =
+        'Unable to load board data: ' + (err && err.message ? err.message : err);
+    });
+
+    function renderHeatmap(board) {
+      /* ── Index cards by list ─────────────────────────────────────────── */
+      var cardsByList = {};
+      board.cards.forEach(function (card) {
+        if (card.closed) return;
+        var id = card.idList;
+        if (!cardsByList[id]) cardsByList[id] = [];
+        cardsByList[id].push(card);
+      });
+
+      var activeLists = (board.lists || []).filter(function (l) {
+        return !l.closed && cardsByList[l.id] && cardsByList[l.id].length > 0;
+      });
+
+      /* ── Compute portfolio stats ─────────────────────────────────────── */
+      var allCards = board.cards.filter(function (c) { return !c.closed; });
+      var scored = allCards.map(function (c) {
+        return EquityUtils.parseTitle(c.name);
+      }).filter(Boolean);
+
+      var avgScore = scored.length
+        ? (scored.reduce(function (s, p) { return s + p.score; }, 0) / scored.length)
+        : null;
+
+      var buckets = { green: 0, blue: 0, yellow: 0, orange: 0, red: 0 };
+      scored.forEach(function (p) {
+        buckets[EquityUtils.scoreToTrelloColor(p.score)]++;
+      });
+
+      /* ── Render stats bar ────────────────────────────────────────────── */
+      var statsEl = document.getElementById('stats');
+      statsEl.innerHTML =
+        chip('Total positions', allCards.length) +
+        (avgScore !== null ? chip('Avg score', avgScore.toFixed(2) + ' / 5.0') : '') +
+        chip('💚 Very High', buckets.green) +
+        chip('🔵 High', buckets.blue) +
+        chip('🟡 Moderate', buckets.yellow) +
+        chip('🟠 Selective', buckets.orange) +
+        chip('🔴 Avoid', buckets.red);
+
+      function chip(label, value) {
+        return '<div class="stat-chip"><strong>' + value + '</strong>\u2002' + label + '</div>';
+      }
+
+      /* ── Render sector sections ──────────────────────────────────────── */
+      var sectorsEl = document.getElementById('sectors');
+      sectorsEl.innerHTML = '';
+
+      activeLists.forEach(function (list) {
+        /* Parse each card title once; reuse the result for sorting + rendering. */
+        var decorated = cardsByList[list.id].map(function (card) {
+          return { card: card, parsed: EquityUtils.parseTitle(card.name) };
+        });
+
+        /* Sort highest score first; unscored cards go to the end. */
+        decorated.sort(function (a, b) {
+          var sa = a.parsed ? a.parsed.score : -1;
+          var sb = b.parsed ? b.parsed.score : -1;
+          return sb - sa;
+        });
+
+        var section = document.createElement('div');
+        section.className = 'sector-section';
+
+        var heading = document.createElement('div');
+        heading.className = 'sector-heading';
+        heading.textContent = list.name + '\u2002(' + decorated.length + ')';
+        section.appendChild(heading);
+
+        var grid = document.createElement('div');
+        grid.className = 'sector-grid';
+
+        decorated.forEach(function (item) {
+          var card = item.card;
+          var parsed = item.parsed;
+          var tile = document.createElement('a');
+          tile.className = 'tile';
+
+          var href = card.shortLink
+            ? 'https://trello.com/c/' + card.shortLink
+            : 'https://trello.com/c/' + card.id;
+          tile.href = href;
+          tile.target = '_blank';
+          tile.rel = 'noopener noreferrer';
+          tile.title = card.name;
+
+          if (parsed) {
+            var colors = EquityUtils.scoreToHeatmapColor(parsed.score);
+            tile.style.background = colors.bg;
+            tile.style.color = colors.fg;
+            tile.innerHTML =
+              '<div class="tile-ticker">' + esc(parsed.ticker) + '</div>' +
+              '<div class="tile-score">' + parsed.score.toFixed(1) + '</div>';
+          } else {
+            tile.classList.add('tile-unscored');
+            tile.style.background = '#97a0af';
+            tile.style.color = '#fff';
+            /* Best-effort display name from the raw card name.
+               Strip only ASCII control characters; keep Unicode / emojis so
+               the tile still shows meaningful content for emoji-heavy titles. */
+            var raw = card.name.replace(/[\x00-\x1F\x7F]/g, ' ').trim();
+            /* Take the first token that looks like a ticker (uppercase word) */
+            var tickerMatch = raw.match(/[A-Z][A-Z0-9.]{1,7}/);
+            var display = tickerMatch ? tickerMatch[0] : raw.slice(0, 10);
+            tile.innerHTML = '<div class="tile-ticker">' + esc(display) + '</div>';
+          }
+
+          grid.appendChild(tile);
+        });
+
+        section.appendChild(grid);
+        sectorsEl.appendChild(section);
+      });
+
+      /* ── Show the heatmap ────────────────────────────────────────────── */
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('heatmap').style.display = 'block';
+    }
+
+    /* HTML-escape helper */
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+
+</body>
+</html>

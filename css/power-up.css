@@ -1,0 +1,223 @@
+/* Equity Research Power-Up — shared styles */
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #172b4d;
+  background: #f4f5f7;
+}
+
+/* ── Heatmap layout ──────────────────────────────────────────────────── */
+.heatmap-wrapper {
+  padding: 16px 20px 32px;
+  min-height: 100vh;
+}
+
+.heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #dfe1e6;
+}
+
+.heatmap-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #172b4d;
+}
+
+/* ── Legend ──────────────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.legend-chip.green  { background: #61bd4f; }
+.legend-chip.blue   { background: #0079bf; }
+.legend-chip.yellow { background: #d9b51c; }
+.legend-chip.orange { background: #e6a118; }
+.legend-chip.red    { background: #eb5a46; }
+.legend-chip.gray   { background: #97a0af; }
+
+/* ── Stats row ───────────────────────────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-chip {
+  background: #fff;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #172b4d;
+}
+
+.stat-chip strong {
+  font-weight: 700;
+}
+
+/* ── Sector sections ─────────────────────────────────────────────────── */
+.sector-section {
+  margin-bottom: 22px;
+}
+
+.sector-heading {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5e6c84;
+  margin-bottom: 8px;
+}
+
+.sector-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Heatmap tile ────────────────────────────────────────────────────── */
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 70px;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  padding: 4px;
+  overflow: hidden;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,.22);
+}
+
+.tile-ticker {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  word-break: break-all;
+}
+
+.tile-score {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.92;
+  margin-top: 3px;
+}
+
+.tile-unscored .tile-ticker {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Loading / error states ──────────────────────────────────────────── */
+.state-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  font-size: 15px;
+  color: #5e6c84;
+}
+
+/* ── Re-evaluate popup ───────────────────────────────────────────────── */
+.popup-wrapper {
+  padding: 16px;
+}
+
+.popup-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5e6c84;
+  margin-bottom: 6px;
+}
+
+.command-box {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: #f4f5f7;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.command-text {
+  flex: 1;
+  padding: 8px 10px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  color: #172b4d;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: text;
+  user-select: all;
+}
+
+.copy-btn {
+  padding: 8px 14px;
+  background: #0079bf;
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.copy-btn:hover { background: #026aa7; }
+.copy-btn.copied { background: #61bd4f; }
+
+.popup-hint {
+  font-size: 12px;
+  color: #5e6c84;
+  line-height: 1.5;
+}
+
+.popup-hint code {
+  background: #f4f5f7;
+  border: 1px solid #dfe1e6;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
