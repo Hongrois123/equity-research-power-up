@@ -40,19 +40,15 @@
       var t = TrelloPowerUp.iframe();
 
       t.render(function () {
-        return t.card('pluginData').then(function (card) {
-          var pluginData = card.pluginData || [];
-          pluginData.forEach(function (data) {
-            if (data.scope === 'card') {
-              try {
-                var parsed = JSON.parse(data.value);
-                document.getElementById('ticker').value = parsed.ticker || '';
-                document.getElementById('rating').value = parsed.rating || '';
-                document.getElementById('target-price').value = parsed.targetPrice || '';
-                document.getElementById('notes').value = parsed.notes || '';
-              } catch (e) {}
-            }
-          });
+        return t.get('card', 'shared').then(function (data) {
+          if (data) {
+            document.getElementById('ticker').value = data.ticker || '';
+            document.getElementById('rating').value = data.rating || '';
+            document.getElementById('target-price').value = data.targetPrice || '';
+            document.getElementById('notes').value = data.notes || '';
+          }
+        }).catch(function (e) {
+          console.error('Failed to load equity research data:', e);
         });
       });
 

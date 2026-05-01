@@ -17,32 +17,29 @@ TrelloPowerUp.initialize({
     }];
   },
   'card-detail-badges': function (t) {
-    return t.card('all').then(function (card) {
+    return t.get('card', 'shared').then(function (data) {
       var badges = [];
-      var pluginData = card.pluginData || [];
-      pluginData.forEach(function (data) {
-        if (data.scope === 'card' && data.idPlugin === t.getContext().idPlugin) {
-          try {
-            var parsed = JSON.parse(data.value);
-            if (parsed.ticker) {
-              badges.push({
-                title: 'Ticker',
-                text: parsed.ticker,
-                color: 'blue'
-              });
-            }
-            if (parsed.rating) {
-              badges.push({
-                title: 'Rating',
-                text: parsed.rating,
-                color: parsed.rating === 'Buy' ? 'green' :
-                       parsed.rating === 'Sell' ? 'red' : 'yellow'
-              });
-            }
-          } catch (e) {}
+      if (data) {
+        if (data.ticker) {
+          badges.push({
+            title: 'Ticker',
+            text: data.ticker,
+            color: 'blue'
+          });
         }
-      });
+        if (data.rating) {
+          badges.push({
+            title: 'Rating',
+            text: data.rating,
+            color: data.rating === 'Buy' ? 'green' :
+                   data.rating === 'Sell' ? 'red' : 'yellow'
+          });
+        }
+      }
       return badges;
+    }).catch(function (e) {
+      console.error('Failed to load equity research badges:', e);
+      return [];
     });
   }
 });
