@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equity Research</title>
+  <link rel="stylesheet" href="https://p.trellocdn.com/power-up.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>Equity Research Details</h2>
+
+    <label for="ticker">Ticker Symbol</label>
+    <input id="ticker" type="text" placeholder="e.g. AAPL" />
+
+    <label for="rating">Rating</label>
+    <select id="rating">
+      <option value="">— select —</option>
+      <option value="Buy">Buy</option>
+      <option value="Hold">Hold</option>
+      <option value="Sell">Sell</option>
+    </select>
+
+    <label for="target-price">Target Price (USD)</label>
+    <input id="target-price" type="number" placeholder="e.g. 200" />
+
+    <label for="notes">Analyst Notes</label>
+    <textarea id="notes" rows="5" placeholder="Enter research notes…"></textarea>
+
+    <div class="actions">
+      <button id="save" class="mod-primary">Save</button>
+      <button id="cancel">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var t = TrelloPowerUp.iframe();
+
+      t.render(function () {
+        return t.card('pluginData').then(function (card) {
+          var pluginData = card.pluginData || [];
+          pluginData.forEach(function (data) {
+            if (data.scope === 'card') {
+              try {
+                var parsed = JSON.parse(data.value);
+                document.getElementById('ticker').value = parsed.ticker || '';
+                document.getElementById('rating').value = parsed.rating || '';
+                document.getElementById('target-price').value = parsed.targetPrice || '';
+                document.getElementById('notes').value = parsed.notes || '';
+              } catch (e) {}
+            }
+          });
+        });
+      });
+
+      document.getElementById('save').addEventListener('click', function () {
+        var data = {
+          ticker: document.getElementById('ticker').value,
+          rating: document.getElementById('rating').value,
+          targetPrice: document.getElementById('target-price').value,
+          notes: document.getElementById('notes').value
+        };
+        t.set('card', 'shared', data).then(function () {
+          t.closePopup();
+        });
+      });
+
+      document.getElementById('cancel').addEventListener('click', function () {
+        t.closePopup();
+      });
+    })();
+  </script>
+</body>
+</html>
