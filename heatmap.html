@@ -37,8 +37,12 @@
 
     var t = TrelloPowerUp.iframe();
 
-    t.board('name', 'cards', 'lists').then(function (board) {
-      renderHeatmap(board);
+    Promise.all([
+      t.board('name'),
+      t.cards('all'),
+      t.lists('all')
+    ]).then(function (results) {
+      renderHeatmap({ name: results[0].name, cards: results[1], lists: results[2] });
     }).catch(function (err) {
       document.getElementById('loading').textContent =
         'Unable to load board data: ' + (err && err.message ? err.message : err);
