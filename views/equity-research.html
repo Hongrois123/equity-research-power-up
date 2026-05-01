@@ -24,7 +24,7 @@
     </select>
 
     <label for="target-price">Target Price (USD)</label>
-    <input id="target-price" type="number" placeholder="e.g. 200" />
+    <input id="target-price" type="number" min="0" step="0.01" placeholder="e.g. 200" />
 
     <label for="notes">Analyst Notes</label>
     <textarea id="notes" rows="5" placeholder="Enter research notes…"></textarea>
@@ -61,6 +61,8 @@
         };
         t.set('card', 'shared', data).then(function () {
           t.closePopup();
+        }).catch(function (e) {
+          console.error('Failed to save equity research data:', e);
         });
       });
 

@@ -1,6 +1,7 @@
 /* global TrelloPowerUp */
 
 var BASE_URL = 'https://hongrois123.github.io/equity-research-power-up';
+var POPUP_HEIGHT = 400;
 
 TrelloPowerUp.initialize({
   'card-buttons': function (t) {
@@ -11,7 +12,7 @@ TrelloPowerUp.initialize({
         return t.popup({
           title: 'Equity Research',
           url: BASE_URL + '/views/equity-research.html',
-          height: 400
+          height: POPUP_HEIGHT
         });
       }
     }];
