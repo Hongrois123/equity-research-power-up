@@ -91,7 +91,7 @@ TrelloPowerUp.initialize({
         text: 'Portfolio Heatmap',
         callback: function (t) {
           return t.modal({
-            url: EquityUtils.assetUrl('heatmap.html'),
+            url: EquityUtils.assetUrl('heatmap.html') + '?v=3',
             title: 'Portfolio Heatmap',
             fullscreen: true
           });
