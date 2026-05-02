@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portfolio Heatmap</title>
-  <link rel="stylesheet" href="./css/power-up.css?v=4" />
+  <link rel="stylesheet" href="./css/power-up.css?v=5" />
 </head>
 <body>
 
@@ -65,7 +65,7 @@
   </div>
 
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
-  <script src="./js/utils.js?v=4"></script>
+  <script src="./js/utils.js?v=5"></script>
   <script>
     'use strict';
 
@@ -336,7 +336,26 @@
                     r.rvol   = avgVol > 0 ? todayVol / avgVol : null;
                   }
                 });
+                return null; // candle succeeded, no fallback needed
               }
+              // Candle returned no_data (OTC, non-US, or free-plan gap) — fall back to quote
+              return fetch(
+                'https://finnhub.io/api/v1/quote?symbol=' +
+                encodeURIComponent(ticker) + '&token=' + encodeURIComponent(apiKey),
+                { credentials: 'omit' }
+              )
+                .then(function (qr) { return qr.json(); })
+                .then(function (q) {
+                  if (q && q.c > 0) {
+                    parsedRows.forEach(function (r) {
+                      if (r.ticker === ticker) {
+                        r.price  = q.c;
+                        r.chgPct = q.dp;  // already in percent
+                        r.rvol   = null;  // quote endpoint has no volume
+                      }
+                    });
+                  }
+                });
             })
             .catch(function () { /* leave as null — shows — */ })
             .then(function () {
