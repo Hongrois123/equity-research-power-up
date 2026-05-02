@@ -309,11 +309,15 @@
 
       /* One request per ticker, 1 100 ms apart = 54 calls/min — safely under the free 60/min cap.
          Each response updates the row immediately and re-renders, so prices fill in progressively. */
+      var _now  = Math.floor(Date.now() / 1000);
+      var _from = _now - 40 * 86400; // 40 calendar days ≈ 26–28 trading days
+
       tickers.forEach(function (ticker, idx) {
         setTimeout(function () {
           fetch(
             'https://finnhub.io/api/v1/stock/candle?symbol=' +
-            encodeURIComponent(ticker) + '&resolution=D&count=22&token=' + encodeURIComponent(apiKey),
+            encodeURIComponent(ticker) + '&resolution=D&from=' + _from + '&to=' + _now +
+            '&token=' + encodeURIComponent(apiKey),
             { credentials: 'omit' }
           )
             .then(function (res) { return res.json(); })

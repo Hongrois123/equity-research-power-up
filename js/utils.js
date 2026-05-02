@@ -60,22 +60,22 @@ var EquityUtils = (function () {
     if (!desc) return {};
     var result = {};
 
-    // Date: matches "Date:", "Last Reviewed:", "Analysis Date:", "**Analysis Date:**" etc.
-    var dateM = desc.match(/\*{0,2}(?:Last Reviewed|Date|Analysis\s+[Dd]ate)\*{0,2}:?\*{0,2}\s+(\d{4}-\d{2}-\d{2})/);
+    // Date: matches "date:", "Date:", "Last Reviewed:", "Analysis Date:", "**Analysis Date:**" etc.
+    var dateM = desc.match(/\*{0,2}(?:last\s+reviewed|date|analysis\s+date)\*{0,2}:?\*{0,2}\s+(\d{4}-\d{2}-\d{2})/i);
     if (dateM) result.date = dateM[1];
 
-    // Sector: matches plain "Sector:", "**Sector:**", "- **Sector:**" etc.
-    var sectorM = desc.match(/\*{0,2}Sector:\*{0,2}\s*([^|\n\r*]+)/);
+    // Sector: case-insensitive; matches "sector:", "Sector:", "**Sector:**" etc.
+    var sectorM = desc.match(/\*{0,2}sector:\*{0,2}\s*([^|\n\r*]+)/i);
     if (sectorM) result.sector = sectorM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
 
     // Industry: optional, on same line after "|"
-    var industryM = desc.match(/\|[^\n\r]*\*{0,2}Industry:\*{0,2}\s*([^|\n\r*]+)/);
+    var industryM = desc.match(/\|[^\n\r]*\*{0,2}industry:\*{0,2}\s*([^|\n\r*]+)/i);
     if (industryM) result.industry = industryM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
 
-    // Stance: matches "Investment Stance:", "Stance:", "**Stance: 🔵 Hold**" etc.
-    // The `:` requirement prevents matching section headings like "## Investment Stance"
-    var stanceM = desc.match(/\*{0,2}(?:Investment\s+)?[Ss]tance:\*{0,2}\s*\*{0,2}([^\n\r*#]+)/);
-    if (stanceM) result.stance = stanceM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
+    // Stance: handles all formats — "Investment Stance:", "investment_stance:", "Current Stance:", "Stance:"
+    // The colon prevents matching section headings like "## Investment Stance"
+    var stanceM = desc.match(/\*{0,2}(?:(?:investment[_ ]|current\s+)?stance):\*{0,2}\s*\*{0,2}([^\n\r*#]+)/i);
+    if (stanceM) result.stance = stanceM[1].replace(/^[^A-Za-z0-9\u00C0-\u024F\u2600-\uFFFF]+/, '').replace(/\s+$/, '');
 
     // Primary Catalyst
     var catalystM = desc.match(/^Primary Catalyst:\s*(.+?)$/m);
