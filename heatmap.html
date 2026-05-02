@@ -50,9 +50,7 @@
             <th data-col="name">Name</th>
             <th data-col="score">Score</th>
             <th data-col="conviction">Conviction</th>
-            <th data-col="price">Price</th>
-            <th data-col="chgPct">Chg%</th>
-            <th data-col="volume">Volume</th>
+            <th data-col="price">Price / RVOL</th>
             <th data-col="sector">Sector</th>
             <th data-col="stance">Stance</th>
             <th data-col="lastReviewed">Last Reviewed</th>
@@ -222,7 +220,7 @@
             lastReviewed: meta.date   || '',
             earnings:     card.due ? card.due.slice(0, 10) : '',
             shortLink:    card.shortLink || card.id,
-            price: null, chgPct: null, volume: null
+            price: null, chgPct: null, rvol: null
           });
         });
       });
@@ -314,15 +312,25 @@
       tickers.forEach(function (ticker, idx) {
         setTimeout(function () {
           fetch(
-            'https://finnhub.io/api/v1/quote?symbol=' +
-            encodeURIComponent(ticker) + '&token=' + encodeURIComponent(apiKey),
+            'https://finnhub.io/api/v1/stock/candle?symbol=' +
+            encodeURIComponent(ticker) + '&resolution=D&count=22&token=' + encodeURIComponent(apiKey),
             { credentials: 'omit' }
           )
             .then(function (res) { return res.json(); })
             .then(function (d) {
-              if (d && d.c > 0) {
+              if (d && d.s === 'ok' && d.c && d.c.length >= 2) {
+                var n        = d.c.length;
+                var price    = d.c[n - 1];
+                var chgPct   = (price - d.c[n - 2]) / d.c[n - 2] * 100;
+                var todayVol = d.v[n - 1];
+                var prior    = d.v.slice(0, n - 1);
+                var avgVol   = prior.reduce(function (s, x) { return s + x; }, 0) / prior.length;
                 parsedRows.forEach(function (r) {
-                  if (r.ticker === ticker) { r.price = d.c; r.chgPct = d.dp; }
+                  if (r.ticker === ticker) {
+                    r.price  = price;
+                    r.chgPct = chgPct;
+                    r.rvol   = avgVol > 0 ? todayVol / avgVol : null;
+                  }
                 });
               }
             })
@@ -361,10 +369,20 @@
         tr.dataset.color = r.color;
         if (activeFilters[r.color]) tr.classList.add('filtered-out');
 
-        var chgClass = r.chgPct != null ? (r.chgPct >= 0 ? 'positive' : 'negative') : '';
-        var chgStr   = r.chgPct != null
-          ? (r.chgPct >= 0 ? '+' : '') + r.chgPct.toFixed(2) + '%'
-          : '\u2014';
+        var marketCell;
+        if (r.price != null) {
+          var chgCls = r.chgPct >= 0 ? 'positive' : 'negative';
+          var chgStr = (r.chgPct >= 0 ? '+' : '') + r.chgPct.toFixed(2) + '%';
+          var rvolPart = '';
+          if (r.rvol != null) {
+            var rvolCls = r.rvol >= 3 ? 'rvol-high' : r.rvol >= 1.5 ? 'rvol-mid' : 'rvol-low';
+            rvolPart = '\u2002<span class="td-rvol ' + rvolCls + '">' + r.rvol.toFixed(1) + '\u00D7</span>';
+          }
+          marketCell = '<span class="td-price">$' + r.price.toFixed(2) + '</span>' +
+            '\u2002<span class="td-chg ' + chgCls + '">' + chgStr + '</span>' + rvolPart;
+        } else {
+          marketCell = '\u2014';
+        }
 
         tr.innerHTML =
           '<td class="td-ticker">' + esc(r.ticker) + '</td>' +
@@ -372,9 +390,7 @@
           '<td class="td-score">'  + r.score.toFixed(1) + '</td>' +
           '<td><span class="td-conv" style="background:' + CONV_COLORS[r.color] + '">' +
             esc(r.conviction) + '</span></td>' +
-          '<td>' + (r.price  != null ? '$' + r.price.toFixed(2) : '\u2014') + '</td>' +
-          '<td class="td-chg ' + chgClass + '">' + chgStr + '</td>' +
-          '<td>' + (r.volume != null ? fmtVol(r.volume) : '\u2014') + '</td>' +
+          '<td class="td-market">' + marketCell + '</td>' +
           '<td>' + esc(r.sector)       + '</td>' +
           '<td>' + esc(r.stance)       + '</td>' +
           '<td>' + esc(r.lastReviewed) + '</td>' +
@@ -422,7 +438,7 @@
         sortState.dir = -sortState.dir;
       } else {
         sortState.col = col;
-        sortState.dir = (col === 'score' || col === 'price' || col === 'chgPct' || col === 'volume') ? -1 : 1;
+        sortState.dir = (col === 'score' || col === 'price' || col === 'rvol') ? -1 : 1;
       }
       renderListTable();
     });

@@ -418,3 +418,11 @@ body {
 }
 
 .change-key-link:hover { text-decoration: underline; }
+
+/* ── Combined price / RVOL cell ──────────────────────────────────────── */
+.td-market { white-space: nowrap; }
+.td-price  { font-weight: 600; }
+.td-rvol         { font-size: 11px; }
+.td-rvol.rvol-low  { color: #97a0af; }
+.td-rvol.rvol-mid  { color: #e6a118; font-weight: 600; }
+.td-rvol.rvol-high { color: #eb5a46; font-weight: 700; }

@@ -59,18 +59,25 @@ var EquityUtils = (function () {
   function parseDescription(desc) {
     if (!desc) return {};
     var result = {};
-    var dateM = desc.match(/^Date:\s*(\d{4}-\d{2}-\d{2})/m);
+
+    // Date: matches "Date:", "Last Reviewed:", "Analysis Date:", "**Analysis Date:**" etc.
+    var dateM = desc.match(/\*{0,2}(?:Last Reviewed|Date|Analysis\s+[Dd]ate)\*{0,2}:?\*{0,2}\s+(\d{4}-\d{2}-\d{2})/);
     if (dateM) result.date = dateM[1];
 
-    var sectorM = desc.match(/^Sector:\s*(.+?)\s*\|\s*Industry:\s*(.+?)$/m);
-    if (sectorM) {
-      result.sector = sectorM[1].replace(/^[^A-Za-z]+/, '').trim();
-      result.industry = sectorM[2].replace(/^[^A-Za-z]+/, '').trim();
-    }
+    // Sector: matches plain "Sector:", "**Sector:**", "- **Sector:**" etc.
+    var sectorM = desc.match(/\*{0,2}Sector:\*{0,2}\s*([^|\n\r*]+)/);
+    if (sectorM) result.sector = sectorM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
 
-    var stanceM = desc.match(/^Investment Stance:\s*(.+?)$/m);
-    if (stanceM) result.stance = stanceM[1].replace(/^[^A-Za-z]+/, '').trim();
+    // Industry: optional, on same line after "|"
+    var industryM = desc.match(/\|[^\n\r]*\*{0,2}Industry:\*{0,2}\s*([^|\n\r*]+)/);
+    if (industryM) result.industry = industryM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
 
+    // Stance: matches "Investment Stance:", "Stance:", "**Stance: 🔵 Hold**" etc.
+    // The `:` requirement prevents matching section headings like "## Investment Stance"
+    var stanceM = desc.match(/\*{0,2}(?:Investment\s+)?[Ss]tance:\*{0,2}\s*\*{0,2}([^\n\r*#]+)/);
+    if (stanceM) result.stance = stanceM[1].replace(/^[^A-Za-z]+/, '').replace(/\s+$/, '');
+
+    // Primary Catalyst
     var catalystM = desc.match(/^Primary Catalyst:\s*(.+?)$/m);
     if (catalystM) result.catalyst = catalystM[1].trim();
 
