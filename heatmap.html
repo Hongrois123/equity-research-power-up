@@ -290,45 +290,49 @@
       }
       document.getElementById('api-key-prompt').style.display = 'none';
       priceCache = {};
+
       var statusEl = document.getElementById('list-price-status');
-      statusEl.textContent = 'Loading live prices\u2026';
+      var tickers  = parsedRows.map(function (r) { return r.ticker; });
+      var total    = tickers.length;
+      var done     = 0;
 
-      var tickers = parsedRows.map(function (r) { return r.ticker; });
-      var BATCH   = 30;
-      var allPromises = [];
-
-      /* Stagger batches by 1.1 s to stay within the 60 calls/min free limit */
-      for (var i = 0; i < tickers.length; i += BATCH) {
-        (function (batch, delay) {
-          batch.forEach(function (ticker) {
-            allPromises.push(new Promise(function (resolve) {
-              setTimeout(function () {
-                fetch('https://finnhub.io/api/v1/quote?symbol=' +
-                  encodeURIComponent(ticker) + '&token=' + encodeURIComponent(apiKey),
-                  { credentials: 'omit' })
-                  .then(function (res) { return res.json(); })
-                  .then(function (d) {
-                    if (d && d.c > 0) {
-                      priceCache[ticker] = { price: d.c, chgPct: d.dp, volume: null };
-                    }
-                    resolve();
-                  })
-                  .catch(function () { resolve(); });
-              }, delay);
-            }));
-          });
-        })(tickers.slice(i, i + BATCH), Math.floor(i / BATCH) * 1100);
+      function updateStatus() {
+        if (done < total) {
+          statusEl.textContent = 'Loading prices \u2026 ' + done + '\u00A0/\u00A0' + total;
+        } else {
+          statusEl.innerHTML =
+            'Powered by <a href="https://finnhub.io" target="_blank" ' +
+            'rel="noopener noreferrer" style="color:#5e6c84">Finnhub</a>' +
+            '\u2003<a class="change-key-link" href="#" id="change-api-key">change key</a>';
+        }
       }
 
-      Promise.all(allPromises).then(function () {
-        parsedRows.forEach(function (r) {
-          var p = priceCache[r.ticker];
-          if (p) { r.price = p.price; r.chgPct = p.chgPct; r.volume = p.volume; }
-        });
-        statusEl.innerHTML = 'Powered by <a href="https://finnhub.io" target="_blank" ' +
-          'rel="noopener noreferrer" style="color:#5e6c84">Finnhub</a>' +
-          '&ensp;<a class="change-key-link" href="#" id="change-api-key">change key</a>';
-        renderListTable();
+      updateStatus();
+
+      /* One request per ticker, 1 100 ms apart = 54 calls/min — safely under the free 60/min cap.
+         Each response updates the row immediately and re-renders, so prices fill in progressively. */
+      tickers.forEach(function (ticker, idx) {
+        setTimeout(function () {
+          fetch(
+            'https://finnhub.io/api/v1/quote?symbol=' +
+            encodeURIComponent(ticker) + '&token=' + encodeURIComponent(apiKey),
+            { credentials: 'omit' }
+          )
+            .then(function (res) { return res.json(); })
+            .then(function (d) {
+              if (d && d.c > 0) {
+                parsedRows.forEach(function (r) {
+                  if (r.ticker === ticker) { r.price = d.c; r.chgPct = d.dp; }
+                });
+              }
+            })
+            .catch(function () { /* leave as null — shows — */ })
+            .then(function () {
+              done++;
+              updateStatus();
+              renderListTable();
+            });
+        }, idx * 1100);
       });
     }
 
