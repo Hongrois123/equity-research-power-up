@@ -35,6 +35,11 @@
     <div id="sectors"></div>
 
     <div id="listview" style="display:none">
+      <div id="api-key-prompt" class="api-key-prompt" style="display:none">
+        Live prices via <a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer">Finnhub</a> (free &mdash; no credit card). Paste your API key:
+        <input id="finnhub-key-input" type="text" placeholder="Paste API key&hellip;" autocomplete="off" spellcheck="false" />
+        <button id="finnhub-key-save">Save &amp; load prices</button>
+      </div>
       <div class="list-status-bar">
         <span id="list-price-status" class="list-price-status"></span>
       </div>
@@ -275,42 +280,56 @@
       if (isList && priceCache === null) fetchPrices();
     }
 
-    /* ── Price fetch (Yahoo Finance, degrades gracefully) ────────────────── */
+    /* ── Price fetch (Finnhub, key stored in localStorage) ─────────────── */
     function fetchPrices() {
+      var apiKey = localStorage.getItem('finnhub_api_key');
+      if (!apiKey) {
+        document.getElementById('api-key-prompt').style.display = '';
+        document.getElementById('list-price-status').textContent = '';
+        return;
+      }
+      document.getElementById('api-key-prompt').style.display = 'none';
       priceCache = {};
-      var tickers  = parsedRows.map(function (r) { return r.ticker; }).join(',');
       var statusEl = document.getElementById('list-price-status');
       statusEl.textContent = 'Loading live prices\u2026';
 
-      var url = 'https://query2.finance.yahoo.com/v7/finance/quote' +
-        '?symbols=' + encodeURIComponent(tickers) +
-        '&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume' +
-        '&formatted=false&lang=en-US&region=US';
+      var tickers = parsedRows.map(function (r) { return r.ticker; });
+      var BATCH   = 30;
+      var allPromises = [];
 
-      fetch(url, { credentials: 'omit', mode: 'cors' })
-        .then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        })
-        .then(function (data) {
-          var quotes = (data.quoteResponse && data.quoteResponse.result) || [];
-          quotes.forEach(function (q) {
-            priceCache[q.symbol] = {
-              price:  q.regularMarketPrice,
-              chgPct: q.regularMarketChangePercent,
-              volume: q.regularMarketVolume
-            };
+      /* Stagger batches by 1.1 s to stay within the 60 calls/min free limit */
+      for (var i = 0; i < tickers.length; i += BATCH) {
+        (function (batch, delay) {
+          batch.forEach(function (ticker) {
+            allPromises.push(new Promise(function (resolve) {
+              setTimeout(function () {
+                fetch('https://finnhub.io/api/v1/quote?symbol=' +
+                  encodeURIComponent(ticker) + '&token=' + encodeURIComponent(apiKey),
+                  { credentials: 'omit' })
+                  .then(function (res) { return res.json(); })
+                  .then(function (d) {
+                    if (d && d.c > 0) {
+                      priceCache[ticker] = { price: d.c, chgPct: d.dp, volume: null };
+                    }
+                    resolve();
+                  })
+                  .catch(function () { resolve(); });
+              }, delay);
+            }));
           });
-          parsedRows.forEach(function (r) {
-            var p = priceCache[r.ticker];
-            if (p) { r.price = p.price; r.chgPct = p.chgPct; r.volume = p.volume; }
-          });
-          statusEl.textContent = '';
-          renderListTable();
-        })
-        .catch(function () {
-          statusEl.textContent = 'Live prices unavailable';
+        })(tickers.slice(i, i + BATCH), Math.floor(i / BATCH) * 1100);
+      }
+
+      Promise.all(allPromises).then(function () {
+        parsedRows.forEach(function (r) {
+          var p = priceCache[r.ticker];
+          if (p) { r.price = p.price; r.chgPct = p.chgPct; r.volume = p.volume; }
         });
+        statusEl.innerHTML = 'Powered by <a href="https://finnhub.io" target="_blank" ' +
+          'rel="noopener noreferrer" style="color:#5e6c84">Finnhub</a>' +
+          '&ensp;<a class="change-key-link" href="#" id="change-api-key">change key</a>';
+        renderListTable();
+      });
     }
 
     /* ── List table ──────────────────────────────────────────────────────── */
@@ -371,6 +390,27 @@
     }
 
     document.addEventListener('click', function (e) {
+      /* API key: save */
+      if (e.target.id === 'finnhub-key-save') {
+        var val = document.getElementById('finnhub-key-input').value.trim();
+        if (val) {
+          localStorage.setItem('finnhub_api_key', val);
+          priceCache = null;
+          fetchPrices();
+        }
+        return;
+      }
+      /* API key: change */
+      if (e.target.id === 'change-api-key') {
+        e.preventDefault();
+        localStorage.removeItem('finnhub_api_key');
+        priceCache = null;
+        document.getElementById('list-price-status').textContent = '';
+        document.getElementById('finnhub-key-input').value = '';
+        fetchPrices();
+        return;
+      }
+      /* Sort header */
       var th = e.target.closest && e.target.closest('#list-table th[data-col]');
       if (!th) return;
       var col = th.dataset.col;

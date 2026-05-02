@@ -369,3 +369,52 @@ body {
 }
 
 .td-link:hover { background: #dfe1e6; }
+
+/* ── Finnhub API key prompt ──────────────────────────────────────────── */
+.api-key-prompt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: #fffae6;
+  border: 1px solid #f5d12a;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #172b4d;
+}
+
+.api-key-prompt input[type="text"] {
+  padding: 5px 10px;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+  width: 280px;
+  max-width: 100%;
+  background: #fff;
+}
+
+.api-key-prompt button {
+  padding: 5px 14px;
+  background: #0079bf;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.api-key-prompt button:hover { background: #005e9e; }
+
+.change-key-link {
+  font-size: 11px;
+  color: #5e6c84;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.change-key-link:hover { text-decoration: underline; }
