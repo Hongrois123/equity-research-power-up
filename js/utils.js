@@ -61,7 +61,9 @@ var EquityUtils = (function () {
     var result = {};
 
     // Normalise literal \n escape sequences (produced by some Copilot card-write paths)
-    desc = desc.replace(/\\n/g, '\n');, "Date:", "Last Reviewed:", "Analysis Date:", "**Analysis Date:**" etc.
+    desc = desc.replace(/\\n/g, '\n');
+
+    // Date: matches "date:", "Date:", "Last Reviewed:", "Analysis Date:", "**Analysis Date:**" etc.
     var dateM = desc.match(/\*{0,2}(?:last\s+reviewed|date|analysis\s+date)\*{0,2}:?\*{0,2}\s+(\d{4}-\d{2}-\d{2})/i);
     if (dateM) result.date = dateM[1];
 
